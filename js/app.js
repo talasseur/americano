@@ -15,7 +15,8 @@ const COURT_COLORS = {
   blanc: { label: 'Blanc', bg: '#ffffff', fg: '#121212' },
 };
 
-const AVATAR_COLORS = ['#ffe14d', '#ff7eb6', '#c6f432', '#5ce1e6', '#ff9f43', '#b79cff'];
+const AVATAR_COLORS = ['#fde3d3', '#d6f3f5', '#fbf0c4', '#e6defd', '#d8f3e6', '#eaf7c8', '#fbdbe8'];
+const MEDALS = { 2: '#c9c8c2', 3: '#e3a77a' };
 const DEFAULT_COURTS = [
   { name: 'Center Court', color: 'noir' },
   { name: 'Terrain 2', color: 'vert' },
@@ -25,11 +26,11 @@ const PIN_KEY = 'americano-pin';
 const MAX_COURTS = 4;
 
 const ICONS = {
-  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
-  unlock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.6-1.8"/></svg>',
-  tour: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M12 4v16M3 12h18M7.5 8v8M16.5 8v8"/></svg>',
-  programme: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.3"/><circle cx="4.5" cy="12" r="1.3"/><circle cx="4.5" cy="18" r="1.3"/></svg>',
-  classement: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 16v5M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+  unlock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 7.6-1.8"/></svg>',
+  tour: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16M3 12h18"/></svg>',
+  programme: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></svg>',
+  classement: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 16v5M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>',
 };
 
 // ---------- État ----------
@@ -158,26 +159,10 @@ function currentTab() {
 }
 
 function renderHero() {
-  const t = state.tournament;
-  const words = (t?.name || DEFAULT_NAME).trim().split(/\s+/);
-  const l2 = words.length > 1 ? words.pop() : '';
-  const l1 = words.join(' ');
-
-  let status = 'Bientôt';
-  let live = false;
-  if (t?.status === 'setup') status = 'En préparation';
-  if (t?.status === 'running') {
-    status = `Tour ${t.current_round} / ${totalRounds()}`;
-    live = true;
-  }
-  if (t?.status === 'finished') status = 'Terminé';
-
+  const name = state.tournament?.name || DEFAULT_NAME;
   $('#hero').innerHTML = `
-    <div class="hero-inner">
-      <div>
-        <h1><span class="l1">${esc(l1)}</span>${l2 ? `<span class="l2">${esc(l2)}</span>` : ''}</h1>
-        <div class="hero-status ${live ? 'live' : ''}"><span class="dot"></span>${esc(status)}</div>
-      </div>
+    <div class="topbar">
+      <div class="brand"><i></i><span>${esc(name)}</span>${isAdmin() ? '<em>admin</em>' : ''}</div>
       <button class="lock-btn ${isAdmin() ? 'on' : ''}" data-action="lock" aria-label="Mode admin">
         ${isAdmin() ? ICONS.unlock : ICONS.lock}
       </button>
@@ -187,8 +172,27 @@ function renderHero() {
 function renderTabs() {
   const tab = currentTab();
   const item = (id, label) =>
-    `<button class="tab ${tab === id ? 'active' : ''}" data-action="tab" data-tab="${id}">${ICONS[id]}<span>${label}</span></button>`;
+    `<button class="tab ${tab === id ? 'active' : ''}" data-action="tab" data-tab="${id}" aria-label="${label}"><span>${ICONS[id]}</span></button>`;
   $('#tabs').innerHTML = item('tour', 'Tour') + item('programme', 'Programme') + item('classement', 'Classement');
+}
+
+// En-tête centré de chaque écran : petit libellé + grand chiffre.
+function pageHero(label, big, unit = '', extra = '') {
+  return `
+    <div class="page-hero">
+      <small>${label}</small>
+      <div class="big num">${big}${unit ? `<span>${unit}</span>` : ''}</div>
+      ${extra}
+    </div>`;
+}
+
+function roundDots(current, total, finished = false) {
+  let html = '<div class="dots">';
+  for (let r = 1; r <= total; r++) {
+    const cls = finished || r < current ? 'done' : r === current ? 'now' : '';
+    html += `<i class="${cls}"></i>`;
+  }
+  return html + '</div>';
 }
 
 function renderView() {
@@ -209,10 +213,10 @@ function viewTour() {
   const t = state.tournament;
   if (!t || t.status === 'setup') return isAdmin() ? viewSetupEditor() : viewSetupPublic();
   if (t.status === 'finished') {
+    const total = totalRounds();
     return `
-      <div class="section-title">Tournoi terminé</div>
-      <p class="hint">Tous les tours ont été joués. Place au podium !</p>
-      <button class="btn pink" data-action="tab" data-tab="classement">Voir le podium</button>`;
+      ${pageHero('Tournoi terminé', total, 'tours joués', roundDots(total, total, true))}
+      <button class="btn" data-action="tab" data-tab="classement">Voir les résultats</button>`;
   }
 
   const r = t.current_round;
@@ -221,24 +225,22 @@ function viewTour() {
   const resting = restingIn(r);
   const allDone = matches.every(isScored);
 
-  let html = `<div class="section-title">Tour ${r} <small>/ ${total}</small></div>`;
+  let html = pageHero('Tour en cours', r, `/ ${total}`, roundDots(r, total));
   html += matches.map(courtCard).join('');
   if (resting.length) {
     html += `
-      <div class="resting">
-        <div class="label">En pause ce tour</div>
-        <div class="resting-list">
-          ${resting.map((p) => `<span class="chip-player">${avatar(p)}${esc(p.name)}</span>`).join('')}
-        </div>
+      <div class="rest">
+        <small>En pause ce tour</small>
+        <b>${resting.map((p) => esc(p.name)).join(', ')}</b>
       </div>`;
   }
   if (isAdmin()) {
     const last = r >= total;
-    html += `<button class="btn pink" data-action="next-round" ${allDone ? '' : 'disabled'}>${last ? 'Terminer le tournoi' : 'Tour suivant →'}</button>`;
-    if (!allDone) html += `<p class="hint" style="text-align:center;margin-top:10px">Entre tous les scores pour passer à la suite.</p>`;
-    if (r > 1) html += `<button class="link-btn" data-action="prev-round">Revenir au tour précédent</button>`;
+    html += `<button class="btn" data-action="next-round" ${allDone ? '' : 'disabled'}>${last ? 'Terminer le tournoi' : 'Tour suivant'}</button>`;
+    if (!allDone) html += '<p class="hint">Entre tous les scores pour passer à la suite.</p>';
+    if (r > 1) html += '<button class="link-btn" data-action="prev-round">Revenir au tour précédent</button>';
   } else if (r < total) {
-    html += `<p class="hint" style="text-align:center">Prochain tour visible dans l'onglet Programme.</p>`;
+    html += '<p class="hint">Les prochains tours sont dans l’onglet Programme.</p>';
   }
   return html;
 }
@@ -260,19 +262,19 @@ function courtCard(m) {
   const done = isScored(m);
   const team = (ids, score, other, side) => {
     const players = ids.map(playerById);
+    const lost = done && score < other;
     let right;
     if (isAdmin()) {
       const d = draftFor(m);
       right = `<input class="score-input" type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="16"
         data-score="${m.id}" data-side="${side}" value="${esc(d[side])}" aria-label="Score">`;
     } else {
-      const win = done && score > other;
-      right = `<div class="score ${done ? (win ? 'win' : '') : 'pending'}">${done ? score : '–'}</div>`;
+      right = `<span class="score num ${done ? (lost ? 'lose' : '') : 'pending'}">${done ? score : '–'}</span>`;
     }
     return `
       <div class="team">
         <div class="avatar-pair">${players.map((p) => avatar(p)).join('')}</div>
-        <div class="names">${players.map((p) => `<span>${esc(p?.name)}</span>`).join('')}</div>
+        <div class="names ${lost ? 'lose' : ''}">${players.map((p) => esc(p?.name)).join(' &amp; ')}</div>
         ${right}
       </div>`;
   };
@@ -282,19 +284,18 @@ function courtCard(m) {
     const s = scoreStatus(m);
     actions = `
       <div class="score-actions">
-        <span class="score-total ${s.bad ? 'bad' : ''}" data-total="${m.id}">Total ${s.sum}/16</span>
-        <button class="btn ${s.saved ? 'saved' : ''}" data-action="save-score" data-id="${m.id}">${s.saved ? 'Enregistré ✓' : 'Valider'}</button>
+        <span class="score-total num ${s.bad ? 'bad' : ''}" data-total="${m.id}">Total ${s.sum} / 16</span>
+        <button class="btn small ${s.saved ? 'saved' : ''}" data-action="save-score" data-id="${m.id}">${s.saved ? 'Enregistré ✓' : 'Valider'}</button>
       </div>`;
   }
 
   return `
-    <article class="court ${c.bg === COURT_COLORS.blanc.bg ? 'light-court' : ''}" data-fg="${c.dark ? 'dark' : 'light'}" data-card="${m.id}"
-      style="--court-bg:${c.bg};--court-fg:${c.fg}">
-      <div class="court-head">
-        <span class="court-name">${esc(c.name)}</span>
+    <article class="card" data-card="${m.id}">
+      <div class="card-head">
+        <span class="dot" style="--c:${c.bg}"></span>${esc(c.name)}
+        ${done ? '<span class="badge">Terminé</span>' : '<span class="badge live">● En jeu</span>'}
       </div>
       ${team([m.a1, m.a2], m.score_a, m.score_b, 'a')}
-      <div class="vs">VS</div>
       ${team([m.b1, m.b2], m.score_b, m.score_a, 'b')}
       ${actions}
     </article>`;
@@ -306,7 +307,7 @@ function updateScoreUI(matchId) {
   const s = scoreStatus(m);
   const total = $(`[data-total="${matchId}"]`);
   if (total) {
-    total.textContent = `Total ${s.sum}/16`;
+    total.textContent = `Total ${s.sum} / 16`;
     total.classList.toggle('bad', s.bad);
   }
   const btn = $(`[data-action="save-score"][data-id="${matchId}"]`);
@@ -373,13 +374,19 @@ function persistSetup(mutate) {
 }
 
 function shapeSummary(playerCount, courtCount) {
-  if (playerCount < 4) return { title: `${playerCount} joueur${playerCount > 1 ? 's' : ''}`, text: 'Ajoute au moins 4 joueurs pour lancer le tournoi.' };
+  if (playerCount < 4) return { title: 'Format', text: 'Ajoute au moins 4 joueurs pour lancer le tournoi.' };
   const s = planShape(playerCount, courtCount);
-  const rest = s.resting === 0 ? 'Personne en pause' : `${s.resting} joueur${s.resting > 1 ? 's' : ''} en pause à chaque tour`;
+  const rest = s.resting === 0 ? 'personne en pause' : `${s.resting} en pause à chaque tour`;
   return {
     title: `${s.rounds} tours · ${s.matchesPerPlayer} matchs chacun`,
-    text: `${playerCount} joueurs sur ${s.courtsUsed} terrain${s.courtsUsed > 1 ? 's' : ''}. ${rest}.`,
+    text: `${s.courtsUsed} terrain${s.courtsUsed > 1 ? 's' : ''}, ${rest}`,
   };
+}
+
+const plural = (n, word) => `${word}${n > 1 ? 's' : ''}`;
+
+function summaryCard(sum) {
+  return `<div class="rest"><small>Format</small><b>${esc(sum.title)}</b><p>${esc(sum.text)}</p></div>`;
 }
 
 function viewSetupEditor() {
@@ -388,34 +395,34 @@ function viewSetupEditor() {
   const players = d.players.map((p) => ({ ...p }));
 
   return `
-    <div class="section-title">Préparation</div>
+    ${pageHero('Préparation', players.length, plural(players.length, 'joueur'))}
 
-    <div class="card">
-      <h2>Nom du tournoi</h2>
+    <div class="card pad">
+      <h2 class="card-title">Nom du tournoi</h2>
       <input class="field" data-field="name" value="${esc(d.name)}" maxlength="40" autocomplete="off">
     </div>
 
-    <div class="card">
-      <h2>Terrains</h2>
+    <div class="card pad">
+      <h2 class="card-title">Terrains</h2>
       ${d.courts
         .map((c, i) => {
           const col = COURT_COLORS[c.color] || COURT_COLORS.noir;
           return `
-          <div class="row">
-            <button class="swatch" style="--c:${col.bg}" data-action="court-color" data-index="${i}" aria-label="Couleur du terrain"></button>
+          <div class="row-line">
+            <button class="swatch" data-action="court-color" data-index="${i}" aria-label="Couleur du terrain"><i style="--c:${col.bg}"></i></button>
             <input class="field" data-court-name="${i}" value="${esc(c.name)}" maxlength="40" autocomplete="off">
             ${d.courts.length > 1 ? `<button class="icon-btn" data-action="remove-court" data-index="${i}" aria-label="Supprimer">✕</button>` : ''}
           </div>`;
         })
         .join('')}
-      ${d.courts.length < MAX_COURTS ? '<button class="link-btn" data-action="add-court">+ Ajouter un terrain</button>' : ''}
+      ${d.courts.length < MAX_COURTS ? '<button class="link-btn" data-action="add-court">Ajouter un terrain</button>' : ''}
     </div>
 
-    <div class="card">
-      <h2>Joueurs (${players.length})</h2>
+    <div class="card pad">
+      <h2 class="card-title">Joueurs</h2>
       <form class="add-row" data-form="add-player">
         <input class="field" name="name" placeholder="Prénom" maxlength="40" autocomplete="off" enterkeyhint="done">
-        <button class="btn pink" type="submit">Ajouter</button>
+        <button class="btn small" type="submit">Ajouter</button>
       </form>
       <ul class="player-list">
         ${players
@@ -426,27 +433,26 @@ function viewSetupEditor() {
           )
           .join('')}
       </ul>
-      ${players.length ? '<p class="hint" style="margin:12px 0 0">Chacun peut déjà ajouter sa photo en touchant son rond.</p>' : ''}
     </div>
+    ${players.length ? '<p class="hint">Chacun peut déjà ajouter sa photo en touchant son rond.</p>' : ''}
 
-    <div class="summary"><strong>${esc(sum.title)}</strong>${esc(sum.text)}</div>
+    ${summaryCard(sum)}
     <button class="btn" data-action="launch" ${players.length >= 4 && d.id ? '' : 'disabled'}>Lancer le tournoi</button>`;
 }
 
 function viewSetupPublic() {
   const t = state.tournament;
-  if (!t) return '<div class="empty">Aucun tournoi pour l’instant.<br>Reviens un peu plus tard !</div>';
-  const sum = shapeSummary(state.players.length, state.courts.length);
+  if (!t) return `${pageHero('Aucun tournoi pour l’instant', '–')}<p class="hint">Reviens un peu plus tard !</p>`;
+  const n = state.players.length;
   return `
-    <div class="section-title">Ça arrive !</div>
-    <p class="hint">Le tournoi n'a pas encore commencé. Touche ton rond pour ajouter ta photo 📸</p>
-    <div class="card">
-      <h2>Joueurs (${state.players.length})</h2>
+    ${pageHero('Le tournoi commence bientôt', n, plural(n, 'joueur'))}
+    <p class="hint">Touche ton rond pour ajouter ta photo.</p>
+    <div class="card pad">
       <div class="player-grid">
         ${state.players.map((p) => `<div class="tile">${avatar(p)}<span>${esc(p.name)}</span></div>`).join('') || '<span class="hint">Liste en cours…</span>'}
       </div>
     </div>
-    <div class="summary"><strong>${esc(sum.title)}</strong>${esc(sum.text)}</div>`;
+    ${summaryCard(shapeSummary(n, state.courts.length))}`;
 }
 
 // ---------- Onglet Programme ----------
@@ -454,35 +460,36 @@ function viewSetupPublic() {
 function viewProgramme() {
   const t = state.tournament;
   if (!t || t.status === 'setup' || !state.matches.length) {
-    return '<div class="section-title">Programme</div><div class="empty">Le programme apparaîtra au lancement du tournoi.</div>';
+    return `${pageHero('Programme', '–')}<p class="hint">Le programme apparaîtra au lancement du tournoi.</p>`;
   }
   const total = totalRounds();
-  let html = `<div class="section-title">Programme</div>`;
+  const finished = t.status === 'finished';
+  let html = pageHero('Programme', total, 'tours', roundDots(t.current_round, total, finished));
   if (isAdmin()) html += '<p class="hint">Touche un match pour corriger son score.</p>';
 
   for (let r = 1; r <= total; r++) {
     const live = t.status === 'running' && r === t.current_round;
-    const done = t.status === 'finished' || r < t.current_round;
-    const badge = live ? '<span class="badge live">En cours</span>' : done ? '<span class="badge done">Joué</span>' : '<span class="badge">À venir</span>';
+    const done = finished || r < t.current_round;
+    const badge = live ? '<span class="badge live">● En cours</span>' : done ? '<span class="badge">Joué</span>' : '<span class="badge">À venir</span>';
     const resting = restingIn(r);
 
-    html += `<section class="round ${live ? 'current' : ''} ${!live && !done ? 'upcoming' : ''}" data-round="${r}">
-      <div class="round-head"><h3>Tour ${r}</h3>${badge}</div>`;
+    html += `<section class="card round ${live ? 'current' : ''} ${!live && !done ? 'upcoming' : ''}" data-round="${r}">
+      <div class="card-head">Tour ${r}${badge}</div>`;
     for (const m of roundMatches(r)) {
       const c = courtInfo(m.court);
       const scored = isScored(m);
-      const winA = scored && m.score_a > m.score_b;
-      const winB = scored && m.score_b > m.score_a;
+      const lostA = scored && m.score_a < m.score_b;
+      const lostB = scored && m.score_b < m.score_a;
       const tag = isAdmin() ? 'button' : 'div';
       html += `
         <${tag} class="match-row" ${isAdmin() ? `data-action="edit-match" data-id="${m.id}"` : ''}>
-          <span class="court-dot"><i style="--c:${c.bg}"></i>${esc(c.name)}</span>
-          <span class="side ${winA ? 'won' : ''}">${esc(nameOf(m.a1))} &amp; ${esc(nameOf(m.a2))}</span>
-          <span class="mid ${scored ? '' : 'pending'}">${scored ? `${m.score_a} – ${m.score_b}` : 'vs'}</span>
-          <span class="side right ${winB ? 'won' : ''}">${esc(nameOf(m.b1))} &amp; ${esc(nameOf(m.b2))}</span>
+          <span class="court-dot"><span class="dot" style="--c:${c.bg}"></span>${esc(c.name)}</span>
+          <span class="side ${lostA ? 'lost' : ''}">${esc(nameOf(m.a1))} &amp; ${esc(nameOf(m.a2))}</span>
+          <span class="mid num ${scored ? '' : 'pending'}">${scored ? `${m.score_a} – ${m.score_b}` : 'vs'}</span>
+          <span class="side right ${lostB ? 'lost' : ''}">${esc(nameOf(m.b1))} &amp; ${esc(nameOf(m.b2))}</span>
         </${tag}>`;
     }
-    if (resting.length) html += `<div class="round-rest">Pause : ${resting.map((p) => esc(p.name)).join(', ')}</div>`;
+    if (resting.length) html += `<div class="round-rest">En pause : ${resting.map((p) => esc(p.name)).join(', ')}</div>`;
     html += '</section>';
   }
   return html;
@@ -490,42 +497,55 @@ function viewProgramme() {
 
 // ---------- Onglet Classement ----------
 
+function rankRow(r, { leader = false } = {}) {
+  return `
+    <div class="row">
+      <span class="rank num">${r.rank}</span>
+      ${avatar(r.player)}
+      <span class="who"><b>${esc(r.player.name)}</b>${leader ? '<sup></sup>' : ''}
+        <small>${r.played} ${plural(r.played, 'match')} · ${r.wins} V</small></span>
+      ${MEDALS[r.rank] ? `<span class="medal" style="background:${MEDALS[r.rank]}"></span>` : ''}
+      <span class="pts num">${r.points}<small>pts</small></span>
+    </div>`;
+}
+
 function viewClassement() {
   const t = state.tournament;
-  if (!t || !state.players.length) return '<div class="section-title">Classement</div><div class="empty">Pas encore de joueurs.</div>';
+  if (!t || !state.players.length) return `${pageHero('Classement', '–')}<p class="hint">Pas encore de joueurs.</p>`;
 
   const rows = computeRanking(state.players, state.matches);
-  const row = (r) => `
-    <li class="rank-row ${r.rank === 1 && r.player && r.points > 0 ? 'top1' : ''}">
-      <span class="pos">${r.rank}</span>
-      ${avatar(r.player)}
-      <span class="who"><strong>${esc(r.player.name)}</strong><span>${r.played} match${r.played > 1 ? 's' : ''} · ${r.wins} victoire${r.wins > 1 ? 's' : ''}</span></span>
-      <span class="pts">${r.points}<small>pts</small></span>
-    </li>`;
+  const leaders = rows.filter((r) => r.rank === 1);
+  const names = leaders.map((r) => esc(r.player.name)).join(' &amp; ');
 
   if (t.status === 'finished') {
-    const winners = rows.filter((r) => r.rank === 1).map((r) => esc(r.player.name));
-    const col = (r, cls) =>
-      r
-        ? `<div class="podium-col ${cls}">
-            ${cls === 'p1' ? '<div class="crown">👑</div>' : ''}
-            ${avatar(r.player)}
-            <div class="pname">${esc(r.player.name)}</div>
-            <div class="ppts">${r.points} pts · ${r.wins} V</div>
-            <div class="podium-block">${r.rank}</div>
-          </div>`
-        : '<div></div>';
+    const top = rows[0];
     return `
-      <div class="champion-title">Bravo <span>${winners.join(' & ')}</span> !</div>
-      <div class="podium">${col(rows[1], 'p2')}${col(rows[0], 'p1')}${col(rows[2], 'p3')}</div>
-      ${rows.length > 3 ? `<ol class="rank-list">${rows.slice(3).map(row).join('')}</ol>` : ''}
-      ${isAdmin() ? '<button class="btn yellow" style="margin-top:18px" data-action="new-tournament">Nouveau tournoi</button>' : ''}`;
+      <div class="champ">
+        <div class="avatars">${leaders.map((r) => avatar(r.player)).join('')}</div>
+        <b>${names}</b>
+        <small>${leaders.length > 1 ? 'Vainqueurs ex æquo' : 'Vainqueur du tournoi'}</small>
+      </div>
+      <div class="winner"><small>Total</small><b class="num">${top.points}<span>points · ${top.wins} ${plural(top.wins, 'victoire')}</span></b></div>
+      ${rows.length > leaders.length ? `<div class="card list">${rows.slice(leaders.length).map((r) => rankRow(r)).join('')}</div>` : ''}
+      ${isAdmin() ? '<button class="btn ghost" style="margin-top:8px" data-action="new-tournament">Nouveau tournoi</button>' : ''}`;
   }
 
+  const anyScore = state.matches.some(isScored);
+  let completed = 0;
+  for (let r = 1; r <= totalRounds() && roundMatches(r).every(isScored); r++) completed = r;
+  const hero = anyScore
+    ? pageHero(
+        `${leaders.length > 1 ? 'En tête' : 'Leader'} ${completed ? `après ${completed} ${plural(completed, 'tour')}` : 'provisoire'}`,
+        rows[0].points,
+        'pts',
+        `<small>${names} · ${rows[0].wins} ${plural(rows[0].wins, 'victoire')}</small>`,
+      )
+    : pageHero('Classement', 0, 'pts', '<small>Aucun score pour l’instant</small>');
+
   return `
-    <div class="section-title">Classement</div>
-    <p class="hint">Total des points marqués. À égalité, le plus de victoires passe devant.</p>
-    <ol class="rank-list">${rows.map(row).join('')}</ol>`;
+    ${hero}
+    <div class="card list">${rows.map((r) => rankRow(r, { leader: anyScore && r.rank === 1 })).join('')}</div>
+    <p class="hint">Total des points marqués. À égalité, le plus de victoires passe devant.</p>`;
 }
 
 // ---------- Fenêtres ----------
@@ -549,7 +569,7 @@ function openLockSheet() {
       `<h2>Mode admin</h2>
        <p class="hint">Tu peux saisir les scores et gérer le tournoi.</p>
        <div class="stack">
-         ${canRestart ? '<button class="btn yellow" data-action="new-tournament">Nouveau tournoi</button>' : ''}
+         ${canRestart ? '<button class="btn" data-action="new-tournament">Nouveau tournoi</button>' : ''}
          <button class="btn ghost" data-action="logout">Quitter le mode admin</button>
        </div>`,
     );
@@ -560,7 +580,7 @@ function openLockSheet() {
      <p class="hint">Entre le code PIN pour saisir les scores.</p>
      <form class="stack" data-form="pin">
        <input class="field" type="password" name="pin" placeholder="Code PIN" autocomplete="off" required>
-       <button class="btn pink" type="submit">Déverrouiller</button>
+       <button class="btn" type="submit">Déverrouiller</button>
      </form>`,
     (sheet) => setTimeout(() => $('input', sheet).focus(), 50),
   );
@@ -572,7 +592,7 @@ function openPhotoSheet(playerId) {
   openSheet(
     `<h2>${esc(p.name)}</h2>
      <div class="big-avatar">${avatar({ ...p, id: null })}</div>
-     <label class="btn pink" data-photo-label>
+     <label class="btn" data-photo-label>
        📸 ${p.photo_url ? 'Changer la photo' : 'Ajouter une photo'}
        <input type="file" accept="image/*" data-photo-input="${p.id}" hidden>
      </label>
@@ -588,7 +608,7 @@ function openColorSheet(index) {
      <p class="hint">${esc(d.courts[index]?.name)}</p>
      <div class="palette">
        ${Object.entries(COURT_COLORS)
-         .map(([id, c]) => `<button class="${id === current ? 'sel' : ''}" style="--c:${c.bg};--fg:${c.fg}" data-action="pick-color" data-index="${index}" data-color="${id}">${c.label}</button>`)
+         .map(([id, c]) => `<button class="${id === current ? 'sel' : ''}" style="--c:${c.bg};--fg:${c.fg}" data-action="pick-color" data-index="${index}" data-color="${id}"><i></i>${c.label}</button>`)
          .join('')}
      </div>`,
   );
@@ -610,7 +630,7 @@ function openScoreSheet(matchId) {
      <form data-form="score" data-id="${m.id}">
        ${line([m.a1, m.a2], 'a', m.score_a)}
        ${line([m.b1, m.b2], 'b', m.score_b)}
-       <button class="btn pink" type="submit">Enregistrer</button>
+       <button class="btn" type="submit">Enregistrer</button>
      </form>
      ${isScored(m) ? `<button class="link-btn" data-action="clear-score" data-id="${m.id}">Effacer le score</button>` : ''}`,
   );
@@ -621,7 +641,7 @@ function openConfirm(title, text, label, onConfirm) {
     `<h2>${esc(title)}</h2>
      <p class="hint">${esc(text)}</p>
      <div class="stack">
-       <button class="btn pink" data-confirm>${esc(label)}</button>
+       <button class="btn" data-confirm>${esc(label)}</button>
        <button class="btn ghost" data-action="close">Annuler</button>
      </div>`,
     (sheet) => {
@@ -793,7 +813,7 @@ const actions = {
   'new-tournament'() {
     openConfirm(
       'Nouveau tournoi ?',
-      'Un nouveau tournoi est créé avec les mêmes joueurs et terrains (modifiables). Le tournoi actuel ne sera plus affiché.',
+      'Un nouveau tournoi est créé avec les mêmes terrains, et une liste de joueurs vide. Le tournoi actuel ne sera plus affiché.',
       'Créer',
       async () => {
         const t = state.tournament;
@@ -802,7 +822,7 @@ const actions = {
           null,
           t?.name || DEFAULT_NAME,
           state.courts.map((c) => ({ name: c.name, color: c.color })),
-          state.players.map((p) => ({ name: p.name, photo_url: p.photo_url })),
+          [],
         );
         state.drafts = {};
         await refresh();
