@@ -25,8 +25,6 @@ const PIN_KEY = 'americano-pin';
 const MAX_COURTS = 4;
 
 const ICONS = {
-  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
-  unlock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 7.6-1.8"/></svg>',
   tour: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16M3 12h18"/></svg>',
   programme: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></svg>',
   classement: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 16v5M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>',
@@ -118,7 +116,10 @@ async function refresh() {
     const data = await api.loadCurrent();
     const prev = state.tournament;
     Object.assign(state, data, { loaded: true, error: null });
-    if (prev?.id !== data.tournament?.id || prev?.status !== data.tournament?.status) state.tab = null;
+    if (prev?.id !== data.tournament?.id || prev?.status !== data.tournament?.status) {
+      state.tab = null;
+      state.celebrated = false;
+    }
   } catch (e) {
     state.error = e.message;
   }
@@ -149,6 +150,25 @@ function render({ force = false } = {}) {
   }
   pendingRender = false;
   $('#view').innerHTML = renderView();
+
+  // Confettis à chaque ouverture du classement final (pas aux simples rafraîchissements).
+  if (currentTab() === 'classement' && state.tournament?.status === 'finished' && !state.celebrated) {
+    state.celebrated = true;
+    celebrate();
+  }
+}
+
+let confetti;
+async function celebrate() {
+  try {
+    confetti ??= (await import('https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/+esm')).default;
+    const opts = { colors: ['#e5487b', '#f6dd8c', '#121212', '#d6f3f5', '#e6defd'], disableForReducedMotion: true };
+    confetti({ ...opts, particleCount: 120, spread: 80, origin: { y: 0.3 } });
+    setTimeout(() => confetti({ ...opts, particleCount: 70, angle: 60, spread: 60, origin: { x: 0, y: 0.65 } }), 250);
+    setTimeout(() => confetti({ ...opts, particleCount: 70, angle: 120, spread: 60, origin: { x: 1, y: 0.65 } }), 400);
+  } catch {
+    // Pas de confettis si la librairie ne se charge pas : ce n'est pas bloquant.
+  }
 }
 
 function currentTab() {
@@ -161,10 +181,8 @@ function renderHero() {
   const name = state.tournament?.name || DEFAULT_NAME;
   $('#hero').innerHTML = `
     <div class="topbar">
-      <div class="brand"><i></i><span>${esc(name)}</span>${isAdmin() ? '<em>admin</em>' : ''}</div>
-      <button class="lock-btn ${isAdmin() ? 'on' : ''}" data-action="lock" aria-label="Mode admin">
-        ${isAdmin() ? ICONS.unlock : ICONS.lock}
-      </button>
+      <div class="brand"><i></i><span>${esc(name)}</span></div>
+      ${isAdmin() ? '<button class="admin-pill" data-action="lock">Admin</button>' : ''}
     </div>`;
 }
 
@@ -694,8 +712,20 @@ function resizeImage(file, size = 400) {
 
 // ---------- Actions ----------
 
+// Accès admin caché : trois taps rapides sur l'onglet Tour.
+let tourTaps = [];
+
 const actions = {
   tab(el) {
+    if (el.dataset.tab === 'tour' && el.classList.contains('tab')) {
+      const now = Date.now();
+      tourTaps = tourTaps.filter((t) => now - t < 1200).concat(now);
+      if (tourTaps.length >= 3) {
+        tourTaps = [];
+        openLockSheet();
+      }
+    }
+    if (state.tab !== el.dataset.tab) state.celebrated = false;
     state.tab = el.dataset.tab;
     render({ force: true });
     window.scrollTo(0, 0);
