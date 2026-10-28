@@ -1,6 +1,6 @@
 // Classement : total de points, puis nombre de matchs gagnés ; sinon égalité.
 export function computeRanking(players, matches) {
-  const stats = new Map(players.map((p) => [p.id, { player: p, points: 0, wins: 0, played: 0 }]));
+  const stats = new Map(players.map((p) => [p.id, { player: p, points: 0, wins: 0, draws: 0, losses: 0, played: 0 }]));
 
   for (const m of matches) {
     if (m.score_a == null || m.score_b == null) continue;
@@ -15,6 +15,8 @@ export function computeRanking(players, matches) {
         s.points += mine;
         s.played += 1;
         if (mine > theirs) s.wins += 1;
+        else if (mine === theirs) s.draws += 1;
+        else s.losses += 1;
       }
     }
   }

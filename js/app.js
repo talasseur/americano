@@ -16,7 +16,6 @@ const COURT_COLORS = {
 };
 
 const AVATAR_COLORS = ['#fde3d3', '#d6f3f5', '#fbf0c4', '#e6defd', '#d8f3e6', '#eaf7c8', '#fbdbe8'];
-const MEDALS = { 2: '#c9c8c2', 3: '#e3a77a' };
 const DEFAULT_COURTS = [
   { name: 'Center Court', color: 'noir' },
   { name: 'Terrain 2', color: 'vert' },
@@ -172,7 +171,7 @@ function renderHero() {
 function renderTabs() {
   const tab = currentTab();
   const item = (id, label) =>
-    `<button class="tab ${tab === id ? 'active' : ''}" data-action="tab" data-tab="${id}" aria-label="${label}"><span>${ICONS[id]}</span></button>`;
+    `<button class="tab ${tab === id ? 'active' : ''}" data-action="tab" data-tab="${id}" aria-label="${label}">${ICONS[id]}<span>${label}</span></button>`;
   $('#tabs').innerHTML = item('tour', 'Tour') + item('programme', 'Programme') + item('classement', 'Classement');
 }
 
@@ -497,16 +496,42 @@ function viewProgramme() {
 
 // ---------- Onglet Classement ----------
 
-function rankRow(r, { leader = false } = {}) {
+const record = (r) => `${r.wins} V · ${r.draws} N · ${r.losses} D`;
+const placeLabel = (rank, tied) => (rank === 1 ? (tied ? '1er ex æquo' : '1er') : `${rank}e${tied ? ' ex æquo' : ''}`);
+
+// medals : affiche la couleur du podium sur le numéro de place (seulement une fois des scores saisis).
+function rankRow(r, { medals = false } = {}) {
+  const medal = medals && r.rank <= 3 ? `medal-${r.rank}` : '';
   return `
     <div class="row">
-      <span class="rank num">${r.rank}</span>
+      <span class="rank num ${medal}">${r.rank}</span>
       ${avatar(r.player)}
-      <span class="who"><b>${esc(r.player.name)}</b>${leader ? '<sup></sup>' : ''}
-        <small>${r.played} ${plural(r.played, 'match')} · ${r.wins} V</small></span>
-      ${MEDALS[r.rank] ? `<span class="medal" style="background:${MEDALS[r.rank]}"></span>` : ''}
+      <span class="who"><b>${esc(r.player.name)}</b><small>${record(r)}</small></span>
       <span class="pts num">${r.points}<small>pts</small></span>
     </div>`;
+}
+
+function viewPodium(rows) {
+  const tied = (r) => rows.filter((x) => x.rank === r.rank).length > 1;
+  const [first, ...others] = rows.slice(0, 3);
+  const side = (r) => `
+    <div class="podium-card">
+      <div class="top-row">${avatar(r.player)}<span class="place medal-${Math.min(r.rank, 3)}">${placeLabel(r.rank, tied(r))}</span></div>
+      <b>${esc(r.player.name)}</b>
+      <div class="pts num">${r.points}<small>pts</small></div>
+      <small>${record(r)}</small>
+    </div>`;
+  return `
+    <div class="page-hero"><small>Tournoi terminé</small><h1 class="page-title">Résultats</h1></div>
+    <div class="champ-card">
+      ${avatar(first.player)}
+      <div class="info"><small>${tied(first) ? 'Vainqueur ex æquo' : 'Vainqueur'}</small><b>${esc(first.player.name)}</b><small>${record(first)}</small></div>
+      <div class="big num">${first.points}<span>pts</span></div>
+    </div>
+    ${others.length ? `<div class="podium-duo">${others.map(side).join('')}</div>` : ''}
+    ${rows.length > 3 ? `<div class="card list">${rows.slice(3).map((r) => rankRow(r)).join('')}</div>` : ''}
+    <p class="hint">V victoires · N nuls · D défaites</p>
+    ${isAdmin() ? '<button class="btn ghost" data-action="new-tournament">Nouveau tournoi</button>' : ''}`;
 }
 
 function viewClassement() {
@@ -514,22 +539,10 @@ function viewClassement() {
   if (!t || !state.players.length) return `${pageHero('Classement', '–')}<p class="hint">Pas encore de joueurs.</p>`;
 
   const rows = computeRanking(state.players, state.matches);
+  if (t.status === 'finished') return viewPodium(rows);
+
   const leaders = rows.filter((r) => r.rank === 1);
   const names = leaders.map((r) => esc(r.player.name)).join(' &amp; ');
-
-  if (t.status === 'finished') {
-    const top = rows[0];
-    return `
-      <div class="champ">
-        <div class="avatars">${leaders.map((r) => avatar(r.player)).join('')}</div>
-        <b>${names}</b>
-        <small>${leaders.length > 1 ? 'Vainqueurs ex æquo' : 'Vainqueur du tournoi'}</small>
-      </div>
-      <div class="winner"><small>Total</small><b class="num">${top.points}<span>points · ${top.wins} ${plural(top.wins, 'victoire')}</span></b></div>
-      ${rows.length > leaders.length ? `<div class="card list">${rows.slice(leaders.length).map((r) => rankRow(r)).join('')}</div>` : ''}
-      ${isAdmin() ? '<button class="btn ghost" style="margin-top:8px" data-action="new-tournament">Nouveau tournoi</button>' : ''}`;
-  }
-
   const anyScore = state.matches.some(isScored);
   let completed = 0;
   for (let r = 1; r <= totalRounds() && roundMatches(r).every(isScored); r++) completed = r;
@@ -544,8 +557,8 @@ function viewClassement() {
 
   return `
     ${hero}
-    <div class="card list">${rows.map((r) => rankRow(r, { leader: anyScore && r.rank === 1 })).join('')}</div>
-    <p class="hint">Total des points marqués. À égalité, le plus de victoires passe devant.</p>`;
+    <div class="card list">${rows.map((r) => rankRow(r, { medals: anyScore })).join('')}</div>
+    <p class="hint">Total des points marqués. À égalité, le plus de victoires passe devant.<br>V victoires · N nuls · D défaites</p>`;
 }
 
 // ---------- Fenêtres ----------
@@ -593,10 +606,9 @@ function openPhotoSheet(playerId) {
     `<h2>${esc(p.name)}</h2>
      <div class="big-avatar">${avatar({ ...p, id: null })}</div>
      <label class="btn" data-photo-label>
-       📸 ${p.photo_url ? 'Changer la photo' : 'Ajouter une photo'}
-       <input type="file" accept="image/*" data-photo-input="${p.id}" hidden>
-     </label>
-     <p class="hint" style="text-align:center;margin-top:12px">La photo sera visible par tous les participants.</p>`,
+       📸 ${p.photo_url ? 'Reprendre un selfie' : 'Prendre un selfie'}
+       <input type="file" accept="image/*" capture="user" data-photo-input="${p.id}" hidden>
+     </label>`,
   );
 }
 

@@ -10,7 +10,7 @@
   --danger: #d33a3a;
   --shadow: 0 8px 28px rgba(18, 18, 18, 0.06);
   --font: 'Geist', system-ui, -apple-system, sans-serif;
-  --tabs-h: 84px;
+  --tabs-h: 76px;
 }
 
 * { box-sizing: border-box; }
@@ -331,25 +331,56 @@ button.match-row:active { background: var(--bg); }
 .list { padding: 0; }
 .list .row { display: flex; align-items: center; gap: 12px; padding: 11px 18px; }
 .list .row + .row { border-top: 1px solid var(--line); }
-.list .rank { width: 18px; color: var(--muted); font-size: 13px; }
+.rank {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Couleurs du podium, portées par le numéro de place */
+.medal-1 { background: #f6dd8c; color: var(--ink) !important; }
+.medal-2 { background: #e4e3de; color: var(--ink) !important; }
+.medal-3 { background: #f1cdb0; color: var(--ink) !important; }
+
 .list .who { flex: 1; min-width: 0; }
 .list .who b { font-weight: 500; }
-.list .who sup { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--pink); vertical-align: top; margin-left: 3px; }
 .list .who small { display: block; color: var(--muted); font-size: 12px; margin-top: 1px; }
-.list .pts { font-size: 24px; font-weight: 300; letter-spacing: -0.5px; }
-.list .pts small { font-size: 12px; color: var(--muted); margin-left: 3px; letter-spacing: 0; }
-.medal { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.list .pts, .podium-card .pts { font-size: 24px; font-weight: 300; letter-spacing: -0.5px; }
+.list .pts small, .podium-card .pts small { font-size: 12px; color: var(--muted); margin-left: 3px; letter-spacing: 0; }
 
-.champ { text-align: center; padding: 18px 8px 18px; }
-.champ .avatars { display: flex; justify-content: center; gap: 12px; margin-bottom: 12px; }
-.champ .avatar { --size: 92px; font-size: 34px; font-weight: 400; box-shadow: 0 0 0 4px #fff, 0 10px 30px rgba(0, 0, 0, 0.12); }
-.champ b { display: block; font-size: 22px; font-weight: 500; }
-.champ small { color: var(--muted); font-size: 14px; }
+.page-title { margin: 2px 0 0; font-size: 28px; font-weight: 500; letter-spacing: -0.5px; }
 
-.winner { background: var(--ink); color: #fff; border-radius: 20px; text-align: center; padding: 16px; margin-bottom: 12px; }
-.winner small { display: block; color: #8c8b86; font-size: 13px; }
-.winner b { font-weight: 300; font-size: 34px; letter-spacing: -1px; }
-.winner b span { font-size: 14px; color: #8c8b86; letter-spacing: 0; margin-left: 4px; }
+.champ-card {
+  background: var(--ink);
+  color: #fff;
+  border-radius: 24px;
+  padding: 20px 18px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.champ-card .avatar { --size: 64px; font-size: 24px; font-weight: 400; box-shadow: 0 0 0 3px var(--pink); }
+.champ-card .info { flex: 1; min-width: 0; }
+.champ-card small { display: block; color: #8c8b86; font-size: 12px; }
+.champ-card b { display: block; font-weight: 500; font-size: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.champ-card .big { font-size: 44px; font-weight: 300; letter-spacing: -1.5px; line-height: 1; text-align: right; }
+.champ-card .big span { display: block; font-size: 12px; color: #8c8b86; letter-spacing: 0; }
+
+.podium-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+
+.podium-card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 14px; min-width: 0; }
+.podium-card .top-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 10px; }
+.podium-card .avatar { --size: 40px; }
+.podium-card .place { font-size: 12px; font-weight: 500; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.podium-card b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.podium-card > small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
 
 /* ---------- Préparation ---------- */
 
@@ -410,46 +441,38 @@ button.match-row:active { background: var(--bg); }
 
 /* ---------- Onglets ---------- */
 
+/* Pilule flottante : l'onglet actif est une pastille noire avec son nom. */
 .tabs {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 14px);
+  transform: translateX(-50%);
   z-index: 10;
-  height: calc(var(--tabs-h) + env(safe-area-inset-bottom));
-  background: #fff;
-  border-radius: 26px 26px 0 0;
-  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.05);
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 0 22px;
+  gap: 4px;
+  padding: 6px;
+  background: #fff;
+  border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(18, 18, 18, 0.12);
 }
 
 .tab {
-  flex: 1;
-  max-width: 140px;
-  height: 100%;
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 24px);
-  color: var(--ink);
+  align-items: center;
+  gap: 7px;
+  height: 46px;
+  padding: 0 16px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
 }
 
-.tab svg { width: 23px; height: 23px; }
-
-.tab.active { padding-bottom: 0; color: #fff; }
-
-.tab.active span {
-  width: 76px;
-  height: calc(70px + env(safe-area-inset-bottom));
-  padding-bottom: env(safe-area-inset-bottom);
-  background: var(--ink);
-  border-radius: 38px 38px 0 0;
-  display: grid;
-  place-items: center;
-}
+.tab svg { width: 22px; height: 22px; }
+.tab span { display: none; }
+.tab.active { background: var(--ink); color: #fff; padding: 0 18px 0 14px; }
+.tab.active span { display: inline; }
 
 /* ---------- Fenêtres ---------- */
 
