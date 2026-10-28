@@ -373,7 +373,7 @@ function persistSetup(mutate) {
 }
 
 function shapeSummary(playerCount, courtCount) {
-  if (playerCount < 4) return { title: 'Format', text: 'Ajoute au moins 4 joueurs pour lancer le tournoi.' };
+  if (playerCount < 4) return { title: 'En attente de joueurs', text: 'Il faut au moins 4 joueurs pour lancer le tournoi.' };
   const s = planShape(playerCount, courtCount);
   const rest = s.resting === 0 ? 'personne en pause' : `${s.resting} en pause à chaque tour`;
   return {
