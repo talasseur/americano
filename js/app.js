@@ -141,6 +141,15 @@ function editingInView() {
   return a && a.tagName === 'INPUT' && $('#view').contains(a);
 }
 
+// Ne touche au DOM que si le contenu change : remplacer la barre d'onglets pendant
+// un tap (rafraîchissement automatique) faisait perdre le clic.
+function setHTML(el, html) {
+  if (el.__html !== html) {
+    el.innerHTML = html;
+    el.__html = html;
+  }
+}
+
 function render({ force = false } = {}) {
   renderHero();
   renderTabs();
@@ -179,18 +188,18 @@ function currentTab() {
 
 function renderHero() {
   const name = state.tournament?.name || DEFAULT_NAME;
-  $('#hero').innerHTML = `
+  setHTML($('#hero'), `
     <div class="topbar">
       <div class="brand"><i></i><span>${esc(name)}</span></div>
       ${isAdmin() ? '<button class="admin-pill" data-action="lock">Admin</button>' : ''}
-    </div>`;
+    </div>`);
 }
 
 function renderTabs() {
   const tab = currentTab();
   const item = (id, label) =>
     `<button class="tab ${tab === id ? 'active' : ''}" data-action="tab" data-tab="${id}" aria-label="${label}">${ICONS[id]}<span>${label}</span></button>`;
-  $('#tabs').innerHTML = item('tour', 'Tour') + item('programme', 'Programme') + item('classement', 'Classement');
+  setHTML($('#tabs'), item('tour', 'Tour') + item('programme', 'Programme') + item('classement', 'Classement'));
 }
 
 // En-tête centré de chaque écran : petit libellé + grand chiffre.
@@ -985,6 +994,9 @@ document.addEventListener('change', async (e) => {
 document.addEventListener('focusout', () => {
   setTimeout(() => {
     if (pendingRender && !editingInView()) render();
+    // Safari iOS : après fermeture du clavier, les éléments fixes peuvent rester décalés
+    // de leur zone cliquable. Un défilement nul force le recalcul.
+    if (!editingInView()) window.scrollTo(window.scrollX, window.scrollY);
   }, 400);
 });
 

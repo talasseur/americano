@@ -15,7 +15,8 @@
 
 * { box-sizing: border-box; }
 
-html { -webkit-text-size-adjust: 100%; }
+/* manipulation : pas de zoom au double tap (les taps rapides sur les onglets zoomaient la page). */
+html { -webkit-text-size-adjust: 100%; touch-action: manipulation; }
 
 body {
   margin: 0;
@@ -438,11 +439,15 @@ button.match-row:active { background: var(--bg); }
 /* ---------- Onglets ---------- */
 
 /* Pilule flottante : l'onglet actif est une pastille noire avec son nom. */
+/* Centrée par marges plutôt que par transform : Safari iOS décale parfois la zone
+   cliquable des éléments fixes transformés. */
 .tabs {
   position: fixed;
-  left: 50%;
+  left: 0;
+  right: 0;
   bottom: calc(env(safe-area-inset-bottom) + 14px);
-  transform: translateX(-50%);
+  width: fit-content;
+  margin: 0 auto;
   z-index: 10;
   display: flex;
   gap: 4px;
