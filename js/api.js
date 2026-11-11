@@ -36,13 +36,14 @@ export function onChange(callback) {
 
 export const checkPin = (pin) => rpc('check_pin', { p_pin: pin });
 
-export const saveSetup = (pin, tournamentId, name, courts, players) =>
+export const saveSetup = (pin, tournamentId, name, courts, players, points) =>
   rpc('admin_save_setup', {
     p_pin: pin,
     p_tournament_id: tournamentId,
     p_name: name,
     p_courts: courts,
     p_players: players,
+    p_points: points,
   });
 
 export const launch = (pin, tournamentId, matches) =>

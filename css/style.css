@@ -521,6 +521,16 @@ button.match-row:active { background: var(--bg); }
 .palette button i { width: 22px; height: 22px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12); }
 .palette button.sel { background: #fff; box-shadow: 0 0 0 1.5px var(--ink); }
 
+.choices { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.choices button {
+  height: 44px;
+  border-radius: 12px;
+  background: var(--field);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.choices button.sel { background: #fff; box-shadow: 0 0 0 1.5px var(--ink); }
+
 .sheet-score { display: flex; align-items: center; gap: 12px; margin: 12px 0; }
 .sheet-score .names { flex: 1; font-size: 16px; }
 

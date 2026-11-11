@@ -23,6 +23,8 @@ const DEFAULT_COURTS = [
 const DEFAULT_NAME = 'UMA Americano';
 const PIN_KEY = 'americano-pin';
 const MAX_COURTS = 4;
+const DEFAULT_POINTS = 16;
+const POINT_CHOICES = [12, 16, 20, 24, 32];
 
 const ICONS = {
   tour: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16M3 12h18"/></svg>',
@@ -60,6 +62,7 @@ const playerById = (id) => state.players.find((p) => p.id === id);
 const nameOf = (id) => playerById(id)?.name ?? '?';
 const totalRounds = () => state.matches.reduce((m, x) => Math.max(m, x.round), 0);
 const roundMatches = (r) => state.matches.filter((m) => m.round === r).sort((a, b) => a.court - b.court);
+const matchPoints = () => state.tournament?.points_per_match || DEFAULT_POINTS;
 const isScored = (m) => m.score_a != null && m.score_b != null;
 
 function restingIn(r) {
@@ -280,7 +283,7 @@ function scoreStatus(m) {
   const filled = d.a !== '' && d.b !== '';
   const sum = (Number(d.a) || 0) + (Number(d.b) || 0);
   const saved = isScored(m) && String(d.a) === String(m.score_a) && String(d.b) === String(m.score_b);
-  return { filled, sum, saved, bad: filled && sum !== 16 };
+  return { filled, sum, saved, bad: filled && sum !== matchPoints() };
 }
 
 function courtCard(m) {
@@ -292,7 +295,7 @@ function courtCard(m) {
     let right;
     if (isAdmin()) {
       const d = draftFor(m);
-      right = `<input class="score-input" type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="16"
+      right = `<input class="score-input" type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="${matchPoints()}"
         data-score="${m.id}" data-side="${side}" value="${esc(d[side])}" aria-label="Score">`;
     } else {
       right = `<span class="score num ${done ? (lost ? 'lose' : '') : 'pending'}">${done ? score : '–'}</span>`;
@@ -310,7 +313,7 @@ function courtCard(m) {
     const s = scoreStatus(m);
     actions = `
       <div class="score-actions">
-        <span class="score-total num ${s.bad ? 'bad' : ''}" data-total="${m.id}">Total ${s.sum} / 16</span>
+        <span class="score-total num ${s.bad ? 'bad' : ''}" data-total="${m.id}">Total ${s.sum} / ${matchPoints()}</span>
         <button class="btn small ${s.saved ? 'saved' : ''}" data-action="save-score" data-id="${m.id}">${s.saved ? 'Enregistré ✓' : 'Valider'}</button>
       </div>`;
   }
@@ -333,7 +336,7 @@ function updateScoreUI(matchId) {
   const s = scoreStatus(m);
   const total = $(`[data-total="${matchId}"]`);
   if (total) {
-    total.textContent = `Total ${s.sum} / 16`;
+    total.textContent = `Total ${s.sum} / ${matchPoints()}`;
     total.classList.toggle('bad', s.bad);
   }
   const btn = $(`[data-action="save-score"][data-id="${matchId}"]`);
@@ -349,7 +352,8 @@ function parseScores(a, b) {
   if (a === '' || b === '' || !Number.isInteger(sa) || !Number.isInteger(sb) || sa < 0 || sb < 0) {
     throw new Error('Entre les deux scores');
   }
-  if (sa + sb !== 16) throw new Error(`Le total doit faire 16 points (là : ${sa + sb})`);
+  const total = matchPoints();
+  if (sa + sb !== total) throw new Error(`Le total doit faire ${total} points (là : ${sa + sb})`);
   return [sa, sb];
 }
 
@@ -370,11 +374,12 @@ function setupData() {
     return {
       id: t.id,
       name: t.name,
+      points: t.points_per_match || DEFAULT_POINTS,
       courts: state.courts.map((c) => ({ name: c.name, color: c.color })),
       players: state.players.map((p) => ({ id: p.id, name: p.name, photo_url: p.photo_url })),
     };
   }
-  return { id: null, name: DEFAULT_NAME, courts: DEFAULT_COURTS.map((c) => ({ ...c })), players: [] };
+  return { id: null, name: DEFAULT_NAME, points: DEFAULT_POINTS, courts: DEFAULT_COURTS.map((c) => ({ ...c })), players: [] };
 }
 
 let saveQueue = Promise.resolve();
@@ -389,7 +394,7 @@ function persistSetup(mutate) {
     .then(async () => {
       // Le premier enregistrement crée le tournoi : les suivants doivent réutiliser son id.
       if (!next.id && state.tournament?.status === 'setup') next.id = state.tournament.id;
-      await api.saveSetup(state.pin, next.id, next.name, next.courts, next.players);
+      await api.saveSetup(state.pin, next.id, next.name, next.courts, next.players, next.points);
     })
     .catch(handleError)
     .then(async () => {
@@ -399,13 +404,13 @@ function persistSetup(mutate) {
   return saveQueue;
 }
 
-function shapeSummary(playerCount, courtCount) {
+function shapeSummary(playerCount, courtCount, points = matchPoints()) {
   if (playerCount < 4) return { title: 'En attente de joueurs', text: 'Il faut au moins 4 joueurs pour lancer le tournoi.' };
   const s = planShape(playerCount, courtCount);
   const rest = s.resting === 0 ? 'personne en pause' : `${s.resting} en pause à chaque tour`;
   return {
     title: `${s.rounds} tours · ${s.matchesPerPlayer} matchs chacun`,
-    text: `${s.courtsUsed} terrain${s.courtsUsed > 1 ? 's' : ''}, ${rest}`,
+    text: `Matchs en ${points} points · ${s.courtsUsed} terrain${s.courtsUsed > 1 ? 's' : ''}, ${rest}`,
   };
 }
 
@@ -417,7 +422,7 @@ function summaryCard(sum) {
 
 function viewSetupEditor() {
   const d = setupData();
-  const sum = shapeSummary(d.players.length, d.courts.length);
+  const sum = shapeSummary(d.players.length, d.courts.length, d.points);
   const players = d.players.map((p) => ({ ...p }));
 
   return `
@@ -426,6 +431,13 @@ function viewSetupEditor() {
     <div class="card pad">
       <h2 class="card-title">Nom du tournoi</h2>
       <input class="field" data-field="name" value="${esc(d.name)}" maxlength="40" autocomplete="off">
+    </div>
+
+    <div class="card pad">
+      <h2 class="card-title">Points par match</h2>
+      <div class="choices">
+        ${POINT_CHOICES.map((n) => `<button class="${n === d.points ? 'sel' : ''}" data-action="set-points" data-points="${n}">${n}</button>`).join('')}
+      </div>
     </div>
 
     <div class="card pad">
@@ -661,7 +673,7 @@ function openScoreSheet(matchId) {
     <div class="sheet-score">
       <div class="avatar-pair">${ids.map((id) => avatar({ ...playerById(id), id: null })).join('')}</div>
       <div class="names">${ids.map((id) => esc(nameOf(id))).join(' &amp; ')}</div>
-      <input class="score-input" type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="16" name="${side}" value="${value ?? ''}">
+      <input class="score-input" type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="${matchPoints()}" name="${side}" value="${value ?? ''}">
     </div>`;
   openSheet(
     `<h2>Tour ${m.round}</h2>
@@ -861,6 +873,10 @@ const actions = {
       },
     );
   },
+  'set-points'(el) {
+    const points = Number(el.dataset.points);
+    if (points !== setupData().points) persistSetup((d) => (d.points = points));
+  },
   'new-tournament'() {
     openConfirm(
       'Nouveau tournoi ?',
@@ -874,6 +890,7 @@ const actions = {
           t?.name || DEFAULT_NAME,
           state.courts.map((c) => ({ name: c.name, color: c.color })),
           [],
+          t?.points_per_match || DEFAULT_POINTS,
         );
         state.drafts = {};
         await refresh();

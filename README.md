@@ -1,6 +1,6 @@
 # UMA Americano
 
-Petite web app pour suivre un tournoi de padel au format Americano : planning automatique (chacun joue avec chacun), saisie des scores en 16 points, classement en direct et podium.
+Petite web app pour suivre un tournoi de padel au format Americano : planning automatique (chacun joue avec chacun), saisie des scores (16 points par match par défaut, réglable : 12, 16, 20, 24 ou 32), classement en direct et podium.
 
 - Front : HTML/CSS/JS sans build, hébergé sur GitHub Pages.
 - Données : Supabase (schéma dans [`supabase/schema.sql`](supabase/schema.sql)). Lecture publique, écritures protégées par un PIN admin vérifié côté base.
